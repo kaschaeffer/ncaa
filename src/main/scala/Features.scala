@@ -94,8 +94,15 @@ object SeasonHistoryFeatures extends FeatureBundle {
       avg(when(Utils.aliasedCol(alias2, "score") > Utils.aliasedCol(alias2, "otherscore"), 1.0).otherwise(0.0))
   }
 
+  object AvgPointDifference extends Feature {
+    override val name = "avg-point-difference"
+    override def transformation(df: DataFrame): Column =
+      avg(Utils.aliasedCol(alias2, "score") - Utils.aliasedCol(alias2, "otherscore"))
+  }
+
   override val features = List(
-    WinFraction
+    WinFraction,
+    AvgPointDifference   
   )
 }
 
