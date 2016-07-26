@@ -76,7 +76,7 @@ object Main {
   }
 
   def main(args: Array[String]) {
-    val sc = new SparkContext("local", "NCAA", "/usr/local/spark", Nil, Map(), Map())
+    val sc = new SparkContext("local[4]", "NCAA", "/usr/local/spark", Nil, Map(), Map())
     val sqlContext = new SQLContext(sc)
     val df = sqlContext.read
       .format("com.databricks.spark.csv")
