@@ -3,3 +3,5 @@ data/
 project/
 shell/
 spark/
+derby.log
+metastore_db/
