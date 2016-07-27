@@ -47,15 +47,8 @@ object GameFeatures extends FeatureBundle {
     override def transformation(df: DataFrame): Column = locationToNumericUdf(df("loc"))
   }
 
-  object NumberOvertimes extends Feature {
-    override val name = "overtime-num"
-    override def transformation(df: DataFrame): Column = df("Numot").cast(DoubleType)
-  }
-
-  
   override val features = List(
-    // LocationNumeric,
-    NumberOvertimes
+    LocationNumeric
   )
 
 }
