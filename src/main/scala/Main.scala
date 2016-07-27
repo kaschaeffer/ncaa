@@ -38,8 +38,8 @@ object Main {
     val losers = games
       .withColumnRenamed("Lteam", "team")
       .withColumnRenamed("Lscore", "score")
-      .withColumn("loc", swapLocationUdf(games("Wloc")))
-      .drop("Wloc")
+      .withColumn("Wloc", swapLocationUdf(games("Wloc")))
+      .withColumnRenamed("Wloc", "loc")
       .withColumnRenamed("Wteam", "otherteam")
       .withColumnRenamed("Wscore", "otherscore")
       .withColumn("label", lit(0.0))
@@ -82,11 +82,16 @@ object Main {
       .format("com.databricks.spark.csv")
       .option("header", "true")
       .option("inferSchema", "true")
-      .load("data/RegularSeasonCompactResults.csv")
+      .load("data/raw/RegularSeasonCompactResults.csv")
 
     // transform this into a dataset that has
     // two rows per game (one for winner and one for loser)
     val teamGameResults = getTeamGameResults(df)
+    // teamGameResults.write
+    //   .format("com.databricks.spark.csv")
+    //   .option("header", "true")
+    //   .save("data/derived/RegularSeasonCompactResultsTeamGame.csv")
+
     val teamGameLabelAndFeatures = getLabelAndFeatures(teamGameResults)
     val (training, test) = splitData(teamGameLabelAndFeatures)
 
