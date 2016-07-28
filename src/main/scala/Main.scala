@@ -8,7 +8,8 @@ import org.apache.spark.sql.functions.rowNumber
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SQLContext
 
-import org.apache.spark.ml.classification.LogisticRegression
+import org.apache.spark.ml.classification.RandomForestClassifier
+import org.apache.spark.ml.classification.RandomForestClassificationModel
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.feature.VectorAssembler
 
@@ -98,8 +99,11 @@ object Main {
     training.show()
     test.show()
     
-    val lr = new LogisticRegression()
+    val lr: RandomForestClassificationModel = new RandomForestClassifier()
       .setLabelCol("label")
+      .setNumTrees(100)
+
+    // RandomForestClassificationModel has no support for feature importance (!)
 
     val fitModel = lr.fit(training)
     // teamGameResults.show()
