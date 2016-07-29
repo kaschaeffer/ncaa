@@ -5,3 +5,6 @@ shell/
 spark/
 derby.log
 metastore_db/
+
+# ignore swap files
+*.sw*
