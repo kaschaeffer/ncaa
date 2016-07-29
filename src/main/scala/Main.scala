@@ -11,6 +11,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.ml.classification.RandomForestClassifier
 import org.apache.spark.ml.classification.RandomForestClassificationModel
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
+import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.ml.feature.VectorAssembler
 
 object Main {
@@ -56,7 +57,7 @@ object Main {
     (split(0), split(1))
   }
 
-  def getLabelAndFeatures(teamGameResults: DataFrame): DataFrame = {
+  def getLabelAndFeatures(teamGameResults: DataFrame): (Array[String], DataFrame) = {
     val featureBundles: List[FeatureBundle] = List(GameFeatures, SeasonHistoryFeatures)
     val featureNames: Array[String] = featureBundles flatMap { b => b.featureNames } toArray
 
@@ -71,9 +72,10 @@ object Main {
       (a, b) => a.as("df1").join(b.as("df2"), Seq("Season", "team", "Daynum"))
     }
     
-    assembler
+    val transformedLabelAndFeatures = assembler
       .transform(labelAndFeatures.na.fill(0.0))
       .select("label", "features")
+    (featureNames, transformedLabelAndFeatures)
   }
 
   def main(args: Array[String]) {
@@ -87,31 +89,45 @@ object Main {
 
     // transform this into a dataset that has
     // two rows per game (one for winner and one for loser)
-    val teamGameResults = getTeamGameResults(df)
+    val teamGameResults = getTeamGameResults(df.limit(100))
     // teamGameResults.write
     //   .format("com.databricks.spark.csv")
     //   .option("header", "true")
     //   .save("data/derived/RegularSeasonCompactResultsTeamGame.csv")
 
-    val teamGameLabelAndFeatures = getLabelAndFeatures(teamGameResults)
-    val (training, test) = splitData(teamGameLabelAndFeatures)
+    val (featureNames, teamGameLabelAndFeatures) = getLabelAndFeatures(teamGameResults)
+    val labelIndexer = new StringIndexer()
+      .setInputCol("label")
+      .setOutputCol("indexedLabel")
+      .fit(teamGameLabelAndFeatures)
+    val teamGameIndexedLabelAndFeatures = labelIndexer.transform(teamGameLabelAndFeatures)
+
+    val (training, test) = splitData(teamGameIndexedLabelAndFeatures)
 
     training.show()
     test.show()
     
-    val lr: RandomForestClassificationModel = new RandomForestClassifier()
-      .setLabelCol("label")
+    val rf = new RandomForestClassifier()
+      .setLabelCol("indexedLabel")
       .setNumTrees(100)
 
     // RandomForestClassificationModel has no support for feature importance (!)
 
-    val fitModel = lr.fit(training)
+    // val fitModel: RandomForestClassificationModel = rf.fit(training)
+    val fitModel = rf.fit(training)
     // teamGameResults.show()
     val predictions = fitModel.transform(test)
     val evaluator = new BinaryClassificationEvaluator()
     println("MODEL SUMMARY")
     println("=============")
-    println("   AUC: " + evaluator.evaluate(predictions))
+    println("\tAUC: " + evaluator.evaluate(predictions))
+
+    val featureImportances = fitModel.featureImportances
+    println("FEATURE IMPORTANCES")
+    println("===================")
+    for ((name, importance) <- featureNames zip featureImportances.toArray) {
+      println(f"\t$name%-40s => $importance%1.4f")
+    }
 
     sc.stop
   }
