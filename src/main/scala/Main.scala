@@ -78,7 +78,30 @@ object Main {
     (featureNames, transformedLabelAndFeatures)
   }
 
+  case class Options(isTestRun: Boolean)
+
+  def parseArgs(args: Array[String]): Option[Options] = {
+    val usage = """
+      |Usage: run [--is-test-run]
+    """.stripMargin
+    args.toList match {
+      case Nil => Some(Options(false))
+      case "--is-test-run" :: Nil => Some(Options(true))
+      case _ => {
+        println(usage)
+        None
+      }
+    }
+  }
+
+
+
   def main(args: Array[String]) {
+    val options = parseArgs(args)
+    if (options == None) {
+      sys.exit(1)
+    }
+
     val sc = new SparkContext("local[4]", "NCAA", "/usr/local/spark", Nil, Map(), Map())
     val sqlContext = new SQLContext(sc)
     val df = sqlContext.read
@@ -89,7 +112,8 @@ object Main {
 
     // transform this into a dataset that has
     // two rows per game (one for winner and one for loser)
-    val teamGameResults = getTeamGameResults(df.limit(100))
+    val finalDf = if (options.get.isTestRun) df.limit(100) else df
+    val teamGameResults = getTeamGameResults(finalDf)
     // teamGameResults.write
     //   .format("com.databricks.spark.csv")
     //   .option("header", "true")
