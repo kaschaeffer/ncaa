@@ -14,6 +14,8 @@ import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.ml.feature.VectorAssembler
 
+import ncaa.splitters.RandomRowSplitter
+
 object Main {
 
   /** Transforms one-row-per-game data to one-row-per-team-game data.
@@ -126,10 +128,10 @@ object Main {
       .fit(teamGameLabelAndFeatures)
     val teamGameIndexedLabelAndFeatures = labelIndexer.transform(teamGameLabelAndFeatures)
 
-    val (training, test) = splitData(teamGameIndexedLabelAndFeatures)
+    val splitData = RandomRowSplitter(0.7) split teamGameIndexedLabelAndFeatures
 
-    training.show()
-    test.show()
+    splitData.training.show()
+    splitData.test.show()
     
     val rf = new RandomForestClassifier()
       .setLabelCol("indexedLabel")
@@ -138,9 +140,9 @@ object Main {
     // RandomForestClassificationModel has no support for feature importance (!)
 
     // val fitModel: RandomForestClassificationModel = rf.fit(training)
-    val fitModel = rf.fit(training)
+    val fitModel = rf.fit(splitData.training)
     // teamGameResults.show()
-    val predictions = fitModel.transform(test)
+    val predictions = fitModel.transform(splitData.test)
     val evaluator = new BinaryClassificationEvaluator()
     println("MODEL SUMMARY")
     println("=============")
